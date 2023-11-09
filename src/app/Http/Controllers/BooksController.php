@@ -9,6 +9,15 @@ use App\Models\Book;
 
 /**
  * Handles the books listing page and all functions related to books management.
+ * 
+ * Functions:
+ * - index
+ * - deleteBook
+ * - error
+ * - newBook
+ * - editBook
+ * - saveBook
+ * - noMethod
  */ 
 class BooksController extends BaseController
 {
@@ -68,14 +77,14 @@ class BooksController extends BaseController
             }
             catch (\Exception $e)
             {
-                return $this->error();
+                return $this->error($request);
             }
 
             $request->session()->flash('return-message', ['success', 'The book was deleted successfully!']);
         }
         else
         {
-            return $this->error('NO_ID');
+            return $this->error($request, 'NO_ID');
         }
         
 
@@ -85,11 +94,13 @@ class BooksController extends BaseController
     /**
      * Redirects to books listing page after error with message
      */ 
-    private function error($error_type = null)
+    private function error(Request $request, $error_type = null)
     {
         $error_message = 'An unexpected error occurred.';
         if ($error_type == 'NO_ID')
-            $error_message = 'There aren\'t any books with the provided id';
+            $error_message = 'There aren\'t any books with the provided id.';
+        else if ($error_type == 'WRONG_METHOD')
+            $error_message = 'The URL can\'t be accessed through that method.';
 
         $request->session()->flash('return-message', ['error', $error_message]);
         return redirect()->route('books');
@@ -117,7 +128,7 @@ class BooksController extends BaseController
         {
             $book = Book::find($id);
             if (!$book)
-                return $this->error('NO_ID');
+                return $this->error($request, 'NO_ID');
         }
 
         // This page's metadata
@@ -156,7 +167,7 @@ class BooksController extends BaseController
         {
             $book = Book::find($request->input('id'));
             if (!$book)
-                return $this->error('NO_ID');
+                return $this->error($request, 'NO_ID');
         }
         else
         {
@@ -171,5 +182,13 @@ class BooksController extends BaseController
 
         $request->session()->flash('return-message', ['success', 'The book was saved successfully!']);
         return redirect()->route('books');
+    }
+
+    /**
+     * Used when preventing a URL to be accessed through the wrong method.
+     */
+    public function noMethod(Request $request)
+    {
+        return $this->error($request, 'WRONG_METHOD');
     }
 }
