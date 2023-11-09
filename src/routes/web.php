@@ -12,5 +12,9 @@
 */
 
 Route::get('/', function () {
-    return view('welcome');
+    return redirect()->route('books');
 });
+
+Route::get('/books', 'BooksController@index')->name('books');
+Route::post('/books', 'BooksController@index');
+Route::get('/books/{id}/delete', 'BooksController@deleteBook');
