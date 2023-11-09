@@ -199,3 +199,31 @@ a {
 .clickable-image {
   cursor: pointer;
 }
+
+.form-div {
+  width: 100%;
+  margin-top: 20px;
+  font-size: 16px;
+}
+
+.form-div table{
+  width: 100%;
+  margin-top: 20px;
+}
+.form-div th{
+  text-align: right;
+  width: 17%;
+  padding-right: 10px;
+  padding-bottom: 10px;
+  font-size: 16px;
+}
+.form-div td{
+  text-align: left;
+  width: 83%;
+  padding-left: 10px;
+  padding-bottom: 10px;
+}
+
+.red {
+  color: #ff0000;
+}

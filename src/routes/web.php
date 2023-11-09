@@ -17,4 +17,8 @@ Route::get('/', function () {
 
 Route::get('/books', 'BooksController@index')->name('books');
 Route::post('/books', 'BooksController@index');
+Route::get('/books/new', 'BooksController@newBook');
+Route::get('/books/{id}/edit', 'BooksController@editBook');
 Route::get('/books/{id}/delete', 'BooksController@deleteBook');
+//Route::get('/books/save', 'BooksController@noMethod');
+Route::post('/books/save', 'BooksController@saveBook');
