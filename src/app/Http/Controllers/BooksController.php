@@ -11,35 +11,30 @@ use App\Models\Book;
  * Handles the books listing page and all functions related to books management.
  * 
  * Functions:
- * - index
- * - deleteBook
- * - error
- * - newBook
- * - editBook
- * - saveBook
- * - noMethod
+ * - index (public)
+ * - bookSearchBase (private)
+ * - deleteBook (public)
+ * - error (private)
+ * - newBook (public)
+ * - editBook (public)
+ * - saveBook (public)
+ * - noMethod (public)
+ * - exportFile (public)
  */ 
 class BooksController extends BaseController
 {
+    // Variables used for the chosen field and direction of the search's orderBy
+    var $order_field;
+    var $order_direction;
+
     /**
      * Displays the books listing page. Also handles filter and order form parameters.
      */ 
     public function index(Request $request)
     {
-        // Handling filter and display order parameters
-        $order_field = $request->input('order_field') ? $request->input('order_field') : 'title';
-        $order_direction = $request->input('order_direction') ? $request->input('order_direction') : 'asc';
-
-        $books = Book::when($request->input('title'), function($query) use ($request){
-                return $query->where('title', 'like', '%'.$request->input('title').'%');
-            })
-            ->when($request->input('author'), function($query) use ($request){
-                return $query->where('author', 'like', '%'.$request->input('author').'%');
-            })
-            ->when($order_field, function($query) use ($request, $order_field, $order_direction){
-                return $query->orderBy($order_field, $order_direction);
-            })
-            ->paginate(10);
+        // Gets the books list to tbe displayed
+        $books = $this->bookSearchBase($request);
+        $books = $books->paginate(10);
 
         $filters['title'] = $request->input('title');
         $filters['author'] = $request->input('author');
@@ -56,9 +51,34 @@ class BooksController extends BaseController
             'filters' => $filters,
             'books' => $books,
             'message' => $request->session()->get('return-message'),
-            'order_field' => $order_field,
-            'order_direction' => $order_direction,
+            'order_field' => $this->order_field,
+            'order_direction' => $this->order_direction,
         ]);
+    }
+
+    /**
+     * Prepares the search in the books table to be used by other functions.
+     *
+     * @param Request $request     A request that contains the fields necessary for the search
+     */ 
+    private function bookSearchBase(Request $request)
+    {
+        // Gets the field and direction to be used on orderBy, which by default is 'title asc'
+        $this->order_field = $request->input('order_field') ? $request->input('order_field') : 'title';
+        $this->order_direction = $request->input('order_direction') ? $request->input('order_direction') : 'asc';
+
+        // Creates the search based on the parameters
+        $books = Book::when($request->input('title'), function($query) use ($request){
+            return $query->where('title', 'like', '%'.$request->input('title').'%');
+        })
+        ->when($request->input('author'), function($query) use ($request){
+            return $query->where('author', 'like', '%'.$request->input('author').'%');
+        })
+        ->when($this->order_field, function($query) use ($request){
+            return $query->orderBy($this->order_field, $this->order_direction);
+        });
+
+        return $books;
     }
 
     /**
@@ -87,7 +107,6 @@ class BooksController extends BaseController
             return $this->error($request, 'NO_ID');
         }
         
-
         return redirect()->route('books');
     }
 
@@ -162,7 +181,7 @@ class BooksController extends BaseController
 
         $validator->setAttributeNames($niceNames)->validate();
 
-        // Gets book from id (or creates a new one) and fill the fields
+        // Gets book from id (or creates a new one) and fills the fields
         if ($request->input('id'))
         {
             $book = Book::find($request->input('id'));
@@ -191,4 +210,89 @@ class BooksController extends BaseController
     {
         return $this->error($request, 'WRONG_METHOD');
     }
+
+    /**
+     * Exports data of current book search to CSV and XML files.
+     */
+    public function exportFile(Request $request)
+    {
+        // Validates export options
+        $validator = Validator::make($request->all(), [
+            'file_fields' => ['required','integer'],
+            'file_type' => ['required','in:csv,xml'],
+        ]);
+
+        $niceNames = array(
+            'file_fields' => 'fields',
+            'file_type' => 'file type',
+        );
+
+        $validator->setAttributeNames($niceNames)->validate();
+
+        // Gets the data from the books to be included in the file
+        $books = $this->bookSearchBase($request);
+        $books = $books->get();
+
+        // Prepares the necessary parameters
+        $file_type = $request->input('file_type');
+        $file_fields = $request->input('file_fields');
+
+        if ($file_fields == 1)
+            $columns = array('Title', 'Author');
+        else if ($file_fields == 2)
+            $columns = array('Title');
+        else if ($file_fields == 3)
+            $columns = array('Author');
+
+        $file_name = 'books.'.$file_type;
+
+        // Creates the header of the file
+        $headers = array(
+            "Content-type"        => "text/".$file_type,
+            "Content-Disposition" => "attachment; filename=$file_name",
+            "Pragma"              => "no-cache",
+            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
+            "Expires"             => "0"
+        );
+
+        // Puts the necessary data in the file, taking in consideration which fields the user wants
+        $callback = function() use($books, $columns, $file_type)
+        {
+            $file = fopen('php://output', 'w');
+
+            if ($file_type == 'csv')
+            {
+                fputcsv($file, $columns);
+
+                foreach ($books as $book) {
+                    $data_in_row = array();
+                    if (in_array('Title', $columns))
+                        $data_in_row[] = $book->title;
+                    if (in_array('Author', $columns))
+                        $data_in_row[] = $book->author;
+                    fputcsv($file, $data_in_row);
+                }
+            }
+            else
+            {
+                $xml = '<?xml version="1.0" encoding="UTF-8" ?><BOOKS>';
+                foreach ($books as $book)
+                {
+                    $xml .= '<BOOK>';
+                    if (in_array('Title', $columns))
+                        $xml .= '<TITLE>'.$book->title.'</TITLE>';
+                    if (in_array('Author', $columns))
+                        $xml .= '<AUTHOR>'.$book->author.'</AUTHOR>';
+                    $xml .= '</BOOK>';
+                }
+                $xml .= '</BOOKS>';
+
+                fwrite($file, $xml);
+            }
+
+            fclose($file);
+        };
+        
+        return response()->stream($callback, 200, $headers);
+    }  
 }

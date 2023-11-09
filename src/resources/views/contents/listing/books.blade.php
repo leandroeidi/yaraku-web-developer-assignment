@@ -3,20 +3,59 @@
 
 <div style="width:100%; max-width:1000px;padding:32px;">
 
-{{-- Message from backend --}}
+{{-- Errors display --}}
+@if ($errors->any())
+    <div class="form-validation-error">
+        <ul>
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
+{{-- End of Errors display --}}
 
+{{-- Message from backend --}}
 @if($message)
 <div class="message" @if($message[0] == "success") style="background-color: #016d01;" @else style="background-color: #6d0404;" @endif id="message" onclick="closeMessage();">
     {{ $message[1] }}
 </div>
 @endif
+{{-- End of Message from backend --}}
 
-{{-- Filter block --}}
-
+{{-- Top block --}}
 <div class="filter-bar">
     <button class="button" onclick="toggleFilter();">Filters</button>
+
+    {{-- Export options block --}}
+    <div>
+        <form method="post" action="/books/export">
+        @csrf
+        <input type="hidden" name="title" value="{{ old('title', (array_key_exists('title', $filters) ? $filters['title'] : '')) }}">
+        <input type="hidden" name="author" value="{{ old('author', (array_key_exists('author', $filters) ? $filters['author'] : '')) }}">
+        <input type="hidden" name="order_field" value="{{ old('order_field', $order_field) }}">
+        <input type="hidden" name="order_direction" value="{{ old('order_direction', $order_direction) }}">
+        <select class="select-field" name="file_fields">
+            <option value="1" @if(old('file_fields')=="1") selected="selected" @endif>Titles and authors</option>
+            <option value="2" @if(old('file_fields')=="2") selected="selected" @endif>Titles</option>
+            <option value="3" @if(old('file_fields')=="3") selected="selected" @endif>Authors</option>
+        </select>
+
+        <select class="select-field" name="file_type">
+            <option value="csv" @if(old('file_type')=="csv") selected="selected" @endif>CSV</option>
+            <option value="xml" @if(old('file_type')=="xml") selected="selected" @endif>XML</option>
+        </select>
+        
+        <button class="button">Export</button>
+        </form>
+    </div>
+    {{-- End of Export options block --}}
+
     <div><a href="/{{ \Request::path() }}/new" class="button-new">Add new book</a></div>
 </div>
+{{-- End of Top block --}}
+
+{{-- Filter block --}}
 <form method="post" action="/books">
 @csrf
 <div class="filter" id="filter">
@@ -42,11 +81,11 @@
     </div>
 </div>
 </form>
+{{-- End of Filter block --}}
 
 @if($books->count())
 
     {{-- Book listing table --}}
-
     <form id="order_form" method="post" action="/books">
     @csrf
     <input type="hidden" name="title" value="{{ array_key_exists('title', $filters) ? $filters['title'] : '' }}">
@@ -79,9 +118,9 @@
         </table>
     </div>
     </form>
+    {{-- End of Book listing table --}}
 
     {{-- Pagination --}}
-
     <div class="table-div-bottom">
         <div>Showing {{ $books->firstItem() }}-{{ $books->lastItem() }} of {{ $books->total() }} books</div>
         @if($books->hasPages())
@@ -110,6 +149,7 @@
         </div>
         @endif
     </div>
+    {{-- End of Pagination --}}
 @else
     <div style="font-size:16px;margin-top:30px;">No books match your search criteria. Please change the search parameters and try again.</div>
 @endif
