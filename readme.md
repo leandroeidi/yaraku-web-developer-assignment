@@ -39,5 +39,5 @@ docker-compose stop \
 1. Run `composer install`. If an error occurs, run `composer update`.
 1. Run `php artisan key:generate`
 1. Run `php artisan migrate`
-1. Make you domain's root be the project's public folder. Eg.: /yaraku-web-developer-assignment/src/public
+1. Make your domain's root be the project's public folder. Eg.: /yaraku-web-developer-assignment/src/public
 1. The site should now be accessible.
